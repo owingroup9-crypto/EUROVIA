@@ -823,7 +823,7 @@ const CONFIG = {
   zalo:    "0828144999",               // nút Zalo mở zalo.me/<số>; mã QR ở assets/img/zalo-qr.png
   facebook: "https://www.facebook.com/share/19uDprdTgo/",
   youtube:  "https://www.youtube.com/@dungnhomkinhowin",
-  formEmail: ""                        // email nhận form tư vấn (gửi qua FormSubmit.co; lần gửi đầu tiên cần bấm link kích hoạt trong email)
+  formEmail: ""                        // email nhận form tư vấn (bỏ trống = chưa gửi được, form nhắc khách gọi/nhắn Zalo; gửi qua FormSubmit.co; lần gửi đầu tiên cần bấm link kích hoạt trong email)
 };
 
 /* ====== BẢNG GIÁ BÁN LẺ LUXANODE R9.8 (16/10/2026) – đ/m² ======
@@ -1024,9 +1024,10 @@ $("#form").addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, d = new FormData(f), ok = $("#ok"), btn = f.querySelector("button[type=submit]");
   const show = (msg, err) => { ok.textContent = msg; ok.classList.toggle("err", !!err); ok.style.display = "block"; };
+  if (!CONFIG.formEmail) return show(`Vui lòng gọi hotline ${CONFIG.hotline} hoặc nhắn Zalo để được tư vấn ngay.`, true);
   btn.disabled = true; btn.textContent = "Đang gửi…";
   try {
-    const r = await fetch("https://formsubmit.co/ajax/" + (CONFIG.formEmail || CONFIG.email), {
+    const r = await fetch("https://formsubmit.co/ajax/" + CONFIG.formEmail, {
       method: "POST",
       headers: {"Content-Type": "application/json", Accept: "application/json"},
       body: JSON.stringify({
