@@ -295,6 +295,7 @@ th.num{text-align:right}
 .chips input:checked + span{background:var(--blue);border-color:var(--blue);color:#fff}
 .form .btn{width:100%;justify-content:center;margin-top:6px}
 .ok{display:none;margin-top:14px;padding:14px;border-radius:10px;background:#e9f6ee;color:#1b6b3a;font-size:14px;font-weight:600}
+.ok.err{background:#fdecec;color:#a12020}
 
 /* footer */
 footer{background:#050f22;color:#9fb0cc;font-size:14.5px;padding:70px 0 0}
@@ -746,7 +747,7 @@ footer a:hover{color:#fff}
       <div class="field"><label for="f-sys">Sản phẩm quan tâm</label><select id="f-sys" name="sys"></select></div>
       <div class="field"><label for="f-msg">Nội dung</label><textarea id="f-msg" name="msg" rows="3" placeholder="Địa chỉ công trình, số lượng cửa, kích thước dự kiến…"></textarea></div>
       <button class="btn btn-red" type="submit">Gửi yêu cầu tư vấn →</button>
-      <div class="ok" id="ok">Bản xem thử: form sẽ gửi yêu cầu về EUROVIA khi website chạy chính thức.</div>
+      <div class="ok" id="ok" role="status"></div>
     </form>
   </div>
 </section>
@@ -822,7 +823,7 @@ const CONFIG = {
   zalo:    "0828144999",               // nút Zalo mở zalo.me/<số>; mã QR ở assets/img/zalo-qr.png
   facebook: "https://www.facebook.com/share/19uDprdTgo/",
   youtube:  "https://www.youtube.com/@dungnhomkinhowin",
-  formEmail: ""                        // email nhận form tư vấn (bỏ trống = dùng email ở trên)
+  formEmail: ""                        // email nhận form tư vấn (gửi qua FormSubmit.co; lần gửi đầu tiên cần bấm link kích hoạt trong email)
 };
 
 /* ====== BẢNG GIÁ BÁN LẺ LUXANODE R9.8 (16/10/2026) – đ/m² ======
@@ -1018,12 +1019,32 @@ showQuote("tl");
 
 $("#f-sys").innerHTML = PRODUCTS.map(p=>`<option>${p.name}</option>`).join("") + "<option>Thanh nhôm Anode nhập khẩu (mua sỉ)</option><option>Khác / cần tư vấn</option>";
 
-// form → mailto (chưa có máy chủ)
-$("#form").addEventListener("submit", e => {
+// form → email qua FormSubmit.co (web tĩnh, không cần máy chủ riêng)
+$("#form").addEventListener("submit", async e => {
   e.preventDefault();
-  const d = new FormData(e.target);
-  const body = `Khách hàng: ${d.get("role")}\nHọ tên: ${d.get("name")}\nSĐT: ${d.get("phone")}\nSản phẩm: ${d.get("sys")}\nNội dung: ${d.get("msg")}`;
-  $("#ok").style.display = "block"; e.target.reset();
+  const f = e.target, d = new FormData(f), ok = $("#ok"), btn = f.querySelector("button[type=submit]");
+  const show = (msg, err) => { ok.textContent = msg; ok.classList.toggle("err", !!err); ok.style.display = "block"; };
+  btn.disabled = true; btn.textContent = "Đang gửi…";
+  try {
+    const r = await fetch("https://formsubmit.co/ajax/" + (CONFIG.formEmail || CONFIG.email), {
+      method: "POST",
+      headers: {"Content-Type": "application/json", Accept: "application/json"},
+      body: JSON.stringify({
+        _subject: `Đăng ký tư vấn: ${d.get("name")} – ${d.get("phone")}`,
+        _template: "table", _captcha: "false",
+        "Khách hàng": d.get("role"), "Họ tên": d.get("name"), "Số điện thoại": d.get("phone"),
+        "Sản phẩm": d.get("sys"), "Nội dung": d.get("msg") || "", "Trang": location.href
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || String(j.success) !== "true") throw new Error(j.message || r.status);
+    show("Cảm ơn bạn! EUROVIA đã nhận yêu cầu và sẽ gọi lại trong thời gian sớm nhất.");
+    f.reset();
+  } catch (_) {
+    show(`Chưa gửi được yêu cầu. Vui lòng gọi hotline ${CONFIG.hotline} hoặc nhắn Zalo để được tư vấn ngay.`, true);
+  } finally {
+    btn.disabled = false; btn.textContent = "Gửi yêu cầu tư vấn →";
+  }
 });
 
 // hero slider
